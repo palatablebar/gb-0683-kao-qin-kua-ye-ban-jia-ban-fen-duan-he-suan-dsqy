@@ -2,7 +2,7 @@ from decimal import Decimal
 from app.workflow import run
 from app.modules.m5_calculate.rules import price
 
-def segment(day,minutes=540):return {'id':'S','employee':'E','shift_day':day,'calendar_day':day,'start':day+'T09:00:00+08:00','end':day+'T18:00:00+08:00','minutes':minutes,'rate':'20','line':2}
+def segment(day,minutes=540):return {'id':'S','person_key':'P-E','employee':'E','source_employee_numbers':['E'],'shift_day':day,'calendar_day':day,'start':day+'T09:00:00+08:00','end':day+'T18:00:00+08:00','minutes':minutes,'rate':'20','line':2}
 def test_real_holiday_then_normal(raw):
     s=run(raw,{});r=[r for r in s['calculations'] if r['employee']=='E001'];assert sum(Decimal(x['amount']) for x in r)==220
 def test_real_holiday_only_two_hours(raw):

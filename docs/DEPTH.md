@@ -8,6 +8,7 @@
 |---|---|---|---|---|
 | M1 打卡采信 | 查看并复算打卡采信 | `/api/m1_ingest` | `app/modules/m1_ingest/reader.py` | `tests/test_ingest.py` |
 | M2 班次日历 | 查看并复算班次日历 | `/api/m2_mapping` | `app/modules/m2_mapping/rules.py` | `tests/test_mapping.py` |
+| M2B 身份归属 | 裁决工号换号/复用并确认主档 | `/api/m2b_identity` | `app/modules/m2b_identity/resolver.py` | `tests/test_identity.py` |
 | M3 跨夜配对 | 查看并复算跨夜配对 | `/api/m3_versions` | `app/modules/m3_versions/rules.py` | `tests/test_versions.py` |
 | M4 缺卡复核 | 查看并复算缺卡复核 | `/api/m4_segments` | `app/modules/m4_segments/rules.py` | `tests/test_segments.py` |
 | M5 工时切段 | 查看并复算工时切段 | `/api/m5_calculate` | `app/modules/m5_calculate/rules.py` | `tests/test_calculate.py` |
@@ -31,6 +32,15 @@
 | TRAP-26 | 旧版本复核 | 覆盖新结论 | 事务条件更新 | `app/store.py` | `tests/test_archive.py::test_stale_review` |
 | TRAP-23 | 休息与跨夜端点 | 重复或漏计 | 半开区间切片 | `app/modules/m4_segments/rules.py` | `tests/test_segments.py::test_break_removed` |
 | TRAP-19 | 假日与周末重叠 | 费率相加 | 假日优先 | `app/modules/m5_calculate/rules.py` | `tests/test_calculate.py::test_holiday_overrides_rest` |
+| TRAP-30 | 换号合并断档 | 按现行工号拆分，工时扣款断档 | 自然人主档+历史工号窗口 | `app/modules/m2b_identity/resolver.py` | `tests/test_identity.py::test_mapping_merges_reassigned_badges_into_one_master` |
+| TRAP-31 | 工号被新人复用 | 按工号合并，两人班次工资串档 | 同日双IN硬证据优先隔离，映射不得覆盖 | `app/modules/m2b_identity/resolver.py` | `tests/test_identity.py::test_reused_badge_double_punch_is_held_even_with_mapping` |
+| TRAP-32 | 启发式并档误判 | 仅凭断档自动并人 | 仅生成待确认建议，不入可付批次 | `app/modules/m2b_identity/evidence.py` | `tests/test_identity.py::test_alias_proposal_stays_unconfirmed_and_outside_payable` |
+| TRAP-33 | 映射规则变更 | 旧结论继续生效 | 映射+身份规则版本入幂等键，旧 run_id 失效 | `app/manifest.py` | `tests/test_identity.py::test_mapping_change_invalidates_old_run_and_rerun_is_idempotent` |
+| TRAP-34 | 重跑产生重复员工/金额 | 追加写入 | 同源同映射同 run_id，INSERT OR IGNORE | `app/store.py` | `tests/test_identity.py::test_mapping_change_invalidates_old_run_and_rerun_is_idempotent` |
+
+## 身份归属裁决
+
+身份在班次日历之后、跨夜配对之前裁决，输出自然人主档 `person_key`、历史工号窗口与受影响班次日。优先级：映射区间冲突(ID_WINDOW) → 同日双IN复用(ID_REUSE) → 权威映射唯一命中(MAPPING) → 断档并档线索(ID_ALIAS，待确认) → 严格模式拒绝 → 全周期单一工号(SINGLETON)。任何未确认打卡进入隔离并从下游剔除，`reconcile.payable=false` 时封存导出返回 422。原始工号与原值随隔离记录保留，重算不丢行。
 
 ## 对账规则
 

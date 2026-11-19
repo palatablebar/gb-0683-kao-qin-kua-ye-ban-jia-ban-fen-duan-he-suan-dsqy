@@ -23,10 +23,13 @@ def apply(state):
         try:
             schedule(r)
             if r['punch'] not in ('IN','OUT') or Decimal(str(r['hourly_rate']))<0:raise DomainError('RANGE','打卡或时薪无效')
-            groups[(r['employee'],r['shift_day'])].append(r)
+            # 身份归属已在 m2b_identity 裁决：按稳定主档 person_key 配对，
+            # 同一自然人换号前后的班次连续，被复用工号的他人记录不会串入。
+            # 遗留的分阶段预览（未跑身份裁决）回退为按原始工号配对。
+            groups[(r.get('person_key',r['employee']),r['shift_day'])].append(r)
         except DomainError as e:bad.append((r,e.code))
     shifts=[]
-    for (employee,day),rows in sorted(groups.items()):
+    for (person_key,day),rows in sorted(groups.items()):
         selected={};conflict=False
         for kind in ('IN','OUT'):
             candidates=[r for r in rows if r['punch']==kind]
@@ -40,7 +43,11 @@ def apply(state):
             shared=('hourly_rate','shift_start','shift_end','break_start','break_end')
             if any(str(selected['IN'][k])!=str(selected['OUT'][k]) for k in shared):conflict=True
         if conflict:bad.extend((r,'CONFLICT') for r in rows);continue
-        shifts.append({'id':employee+'/'+day,'employee':employee,'day':day,'in':selected.get('IN'),'out':selected.get('OUT'),'sources':rows})
+        anchor=selected.get('IN') or selected.get('OUT')
+        person_key=anchor.get('person_key',anchor['employee'])
+        shifts.append({'id':person_key+'/'+day,'person_key':person_key,
+                       'employee':anchor['employee'],'employee_numbers':sorted({r['employee'] for r in rows}),
+                       'day':day,'in':selected.get('IN'),'out':selected.get('OUT'),'sources':rows})
     lines={r['_line'] for r,_ in bad};state['rows']=[r for r in state['rows'] if r['_line'] not in lines]
     for r,c in bad:state['quarantine'].append({'line':r['_line'],'id':r['id'],'code':c,'raw':r['_raw']})
     state['shifts']=shifts;return state

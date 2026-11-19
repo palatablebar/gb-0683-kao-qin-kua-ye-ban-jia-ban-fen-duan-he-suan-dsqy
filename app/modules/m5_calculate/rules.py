@@ -4,8 +4,8 @@ from collections import defaultdict
 
 def price(segments,holidays):
     normal_used=defaultdict(int);out=[]
-    for s in sorted(segments,key=lambda r:(r['start'],r['employee'])):
-        d=date.fromisoformat(s['calendar_day']);key=(s['employee'],s['calendar_day']);minutes=s['minutes'];rate=Decimal(str(s['rate']))
+    for s in sorted(segments,key=lambda r:(r['start'],r['person_key'])):
+        d=date.fromisoformat(s['calendar_day']);key=(s['person_key'],s['calendar_day']);minutes=s['minutes'];rate=Decimal(str(s['rate']))
         if s['calendar_day'] in holidays:parts=[(minutes,Decimal(3),'HOLIDAY')]
         elif d.weekday()>=5:parts=[(minutes,Decimal(2),'REST')]
         else:
@@ -20,4 +20,11 @@ def apply(state):
     holidays=set(state['parameters'].get('holidays',['2026-10-01']))
     calculations=price(state['segments'],holidays)
     total=sum((Decimal(r['amount']) for r in calculations),Decimal(0));paid=sum((Decimal(str(r['paid'])) for r in state['rows']),Decimal(0))
-    state['calculations']=calculations;state['business']={'total':str(total),'paid':str(paid),'difference':str(total-paid),'minutes':sum(r['minutes'] for r in calculations),'unit':'CNY'};return state
+    # 按自然人主档汇总应发：换号前后的片段归入同一 person_key，被复用旧工号的他人不串档。
+    person_totals=defaultdict(lambda:Decimal('0'))
+    for r in calculations:person_totals[r['person_key']]+=Decimal(r['amount'])
+    identity=state.setdefault('identity',{})
+    identity['person_payable']=[{'person_key':k,'payable':str(v.quantize(Decimal('.01')))}
+                                for k,v in sorted(person_totals.items())]
+    state['calculations']=calculations;state['business']={'total':str(total),'paid':str(paid),'difference':str(total-paid),
+        'held_paid':identity.get('held_paid','0'),'minutes':sum(r['minutes'] for r in calculations),'unit':'CNY'};return state

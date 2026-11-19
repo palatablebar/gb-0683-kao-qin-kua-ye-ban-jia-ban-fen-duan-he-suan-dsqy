@@ -34,6 +34,7 @@ def create_app():
     def download(run_id):
         state=store.get(run_id)
         if not state.get('reconcile',{}).get('balanced'):raise DomainError('UNBALANCED','对账未平')
+        if not state.get('reconcile',{}).get('payable',False):raise DomainError('IDENTITY','存在身份未确认记录，该批次不可封存付款')
         return Response(bundle(state),mimetype='text/csv; charset=utf-8',headers={'Content-Disposition':'attachment; filename=evidence.csv'})
     with app.app_context():
         if not store.history():

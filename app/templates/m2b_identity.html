@@ -1,0 +1,70 @@
+{% extends "base.html" %}{% block content %}
+<div class="sheet-layout">
+  <section class="panel sheet">
+    <header><h2>员工主档与历史工号</h2><span>{{data.identity.confirmed_persons}} 名已确认自然人 · 模式 {{data.identity.mode}}</span></header>
+    <div class="scroll">
+      <table class="ledger">
+        <thead>
+          <tr class="letters"><th></th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th><th>F</th></tr>
+          <tr><th>#</th><th>自然人主档</th><th>裁决依据</th><th>历史工号（生效区间）</th><th>受影响班次日</th><th>来源行</th><th>实发合计 CNY</th></tr>
+        </thead>
+        <tbody>
+        {% for m in data.identity.masters %}
+          <tr>
+            <td class="rownum">{{loop.index}}</td>
+            <td tabindex="0"><b>{{m.person_key}}</b></td>
+            <td><span class="state {{m.basis|lower}}">{{m.basis}}</span></td>
+            <td>
+              {% for b in m.historical_employee_numbers %}
+              <div class="badge-line"><code>{{b.employee}}</code><em>{{b.from_date}} → {{b.to_date}}</em><small>{{b.basis}}</small></div>
+              {% endfor %}
+            </td>
+            <td class="num">{{m.affected_shift_days|join('、')}}</td>
+            <td class="num">{{m.source_lines|join('、')}}</td>
+            <td class="num">{{m.paid_total}}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="7">无已确认主档</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel side">
+    <header><h2>归属裁决计数</h2></header>
+    <dl>
+      <dt>映射确认工号</dt><dd>{{data.identity.counters.MAPPING}}</dd>
+      <dt>单一工号确认</dt><dd>{{data.identity.counters.SINGLETON}}</dd>
+      <dt>区间冲突隔离</dt><dd class="error">{{data.identity.counters.ID_WINDOW}}</dd>
+      <dt>复用证据隔离</dt><dd class="error">{{data.identity.counters.ID_REUSE}}</dd>
+      <dt>并档待确认隔离</dt><dd class="error">{{data.identity.counters.ID_ALIAS}}</dd>
+      <dt>待确认实发滞留</dt><dd class="error">{{data.identity.held_paid}}</dd>
+    </dl>
+  </section>
+
+  <section class="panel sheet">
+    <header><h2>待确认线索（不得进入可付批次）</h2><span>{{data.identity.held_count}} 条打卡被拦截</span></header>
+    <div class="scroll">
+      <table class="ledger">
+        <thead><tr><th>类型</th><th>工号</th><th>依据</th><th>详情</th></tr></thead>
+        <tbody>
+        {% for p in data.identity.alias_proposals %}
+          <tr><td><span class="state id_alias">ID_ALIAS</span></td><td><code>{{p.from_employee}} → {{p.to_employee}}</code></td><td>断档 {{p.gap_days}} 天</td><td>{{p.span.from_date}} → {{p.span.to_date}}，{{p.status}}</td></tr>
+        {% endfor %}
+        {% for c in data.identity.window_conflicts %}
+          <tr><td><span class="state id_window">ID_WINDOW</span></td><td><code>{{c.employee}}</code></td><td>{{c.persons|join('、')}}</td><td>{{c.from_date}} → {{c.to_date}}</td></tr>
+        {% endfor %}
+        {% for e in data.identity.reuse_evidence %}
+          <tr><td><span class="state id_reuse">ID_REUSE</span></td><td><code>{{e.employee}}</code></td><td>同日双进场</td><td>{{e.shift_days|join('、')}}</td></tr>
+        {% endfor %}
+        {% if not data.identity.alias_proposals and not data.identity.window_conflicts and not data.identity.reuse_evidence %}
+          <tr><td colspan="4">无待确认线索</td></tr>
+        {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% include "exceptions.html" %}
+</div>
+{% endblock %}

@@ -13,7 +13,7 @@ def test_invalid_break(raw):
     with pytest.raises(DomainError):schedule(r)
 def test_shift_day_is_preserved(raw):assert run(raw,{},3)['shifts'][0]['day']=='2026-10-01'
 def test_newer_punch_selected(raw):
-    s=run(raw,{},2);r=dict(s['rows'][0],id='new',version='2',at='2026-10-01T15:00:00+00:00');s['rows'].append(r);assert apply(s)['shifts'][0]['in']['id']=='new'
+    s=run(raw,{},2);r=dict(s['rows'][0],id='new',version='2',at='2026-10-01T15:00:00+00:00',person_key=s['rows'][0]['employee']);s['rows'].append(r);assert apply(s)['shifts'][0]['in']['id']=='new'
 def test_bad_punch_kind(raw):
     s=run(raw,{},2);s['rows'][0]['punch']='OTHER';assert any(q['code']=='RANGE' for q in apply(s)['quarantine'])
 

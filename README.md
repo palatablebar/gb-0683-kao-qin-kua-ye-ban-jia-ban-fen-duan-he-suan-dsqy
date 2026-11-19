@@ -8,17 +8,22 @@
 docker compose up --build -d
 ```
 
-访问 http://localhost:18252 。初次启动自动运行脏样例，可切换 clean.csv 与 legacy.csv。顶部“运行批次”会重新计算，同源输入复用批次。
+访问 http://localhost:18252 。初次启动自动运行脏样例，可切换 clean.csv、legacy.csv 与 identity.csv。顶部“运行批次”会重新计算，同源输入（含同一映射参数）复用批次。
 
 ## 业务模块
 
 - 打卡采信：`/m1_ingest`、`/api/m1_ingest`
 - 班次日历：`/m2_mapping`、`/api/m2_mapping`
+- 身份归属：`/m2b_identity`、`/api/m2b_identity`
 - 跨夜配对：`/m3_versions`、`/api/m3_versions`
 - 缺卡复核：`/m4_segments`、`/api/m4_segments`
 - 工时切段：`/m5_calculate`、`/api/m5_calculate`
 - 薪资对账：`/m6_reconcile`、`/api/m6_reconcile`
 - 周期归档：`/m7_archive`、`/api/m7_archive`
+
+## 身份归属
+
+工号可换号、可被新员工复用，不能作为身份。系统在班次日历之后按权威映射 `identity_map`（生效区间）确认自然人主档 `person_key`，主档保留全部历史工号窗口与受影响班次；同工号同日双进场视为复用硬证据，优先级高于映射。断档只产生待确认并档建议。任何无法确认的打卡一律隔离、不进入可付批次，封存导出对不可付批次返回 422。原始工号与原值随记录保留，映射或身份规则版本变化会改变 run_id 使旧结果失效，同源重跑不新增重复员工或金额。详见 `docs/DATA-DICTIONARY.md`。
 
 ## 核心规则
 

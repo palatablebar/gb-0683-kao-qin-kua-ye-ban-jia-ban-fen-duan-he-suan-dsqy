@@ -1,0 +1,22 @@
+{
+  "identity_map": [
+    {
+      "person": "王五",
+      "employee": "E201",
+      "from_date": "2026-09-01",
+      "to_date": "2026-09-30"
+    },
+    {
+      "person": "王五",
+      "employee": "E202",
+      "from_date": "2026-10-01",
+      "to_date": null
+    },
+    {
+      "person": "赵六",
+      "employee": "E201",
+      "from_date": "2026-10-01",
+      "to_date": null
+    }
+  ]
+}
